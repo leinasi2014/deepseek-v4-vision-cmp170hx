@@ -130,7 +130,7 @@ class Gemma4Proposer(SpecDecodeBaseProposer):
             torch.accelerator.synchronize()
 
             g = torch.cuda.CUDAGraph()
-            with torch.cuda.graph(g):
+            with torch.cuda.graph(g, capture_error_mode="thread_local"):
                 static_output = masked_emb.get_top_tokens(
                     static_input,
                     lm_head_weight,

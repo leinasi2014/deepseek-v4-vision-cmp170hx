@@ -6865,6 +6865,31 @@ class GPUModelRunner(
             torch.accelerator.empty_cache()
             start_free_gpu_memory = torch.accelerator.get_memory_info()[0]
 
+            # PP communicator priming (wtdcode #4): force first-use init of
+            # the p2p send/recv chain and the last-rank broadcast on the
+            # capture side stream BEFORE torch.cuda.graph() records them.
+            # Lazy communicator init inside capture aborts FULL captures
+            # nondeterministically. Env-gated: VLLM_PP_COMM_PRIME=0 disables.
+            import os as _os
+
+            _pp = get_pp_group()
+            if (
+                _pp.world_size > 1
+                and _os.environ.get("VLLM_PP_COMM_PRIME", "1") != "0"
+            ):
+                _prime = torch.zeros(8, dtype=torch.float32, device=self.device)
+                if not _pp.is_first_rank:
+                    _got = _pp.recv_tensor_dict(src=_pp.prev_rank)
+                    assert _got is not None
+                if not _pp.is_last_rank:
+                    _pp.send_tensor_dict({"prime": _prime}, dst=_pp.next_rank)
+                _bc = _pp.broadcast_tensor_dict(
+                    {"prime": _prime}, src=_pp.world_size - 1
+                )
+                assert _bc is not None
+                torch.cuda.synchronize()
+                logger.info_once("PP communicators primed before cudagraph capture")
+
             for (
                 runtime_mode,
                 batch_descs,

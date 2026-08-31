@@ -277,7 +277,7 @@ class EncoderCudaGraphManager:
             output_buffer = torch.empty_like(output)
 
         graph = torch.cuda.CUDAGraph()
-        with torch.inference_mode(), torch.cuda.graph(graph, pool=self.graph_pool):
+        with torch.inference_mode(), torch.cuda.graph(graph, pool=self.graph_pool, capture_error_mode="thread_local"):
             output = self.model.encoder_cudagraph_forward({**values}, path=path)
             output_buffer.copy_(output)
 

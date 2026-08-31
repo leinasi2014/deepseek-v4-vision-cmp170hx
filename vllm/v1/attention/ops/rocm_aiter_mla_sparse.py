@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # SPDX-FileCopyrightText: Copyright contributors to the vLLM project
 import functools
+import os
 import importlib
 import math
 from importlib.util import find_spec
@@ -2612,6 +2613,12 @@ def _rocm_sparse_attn_prefill_blocked_triton(
         attn_sink = attn_sink.contiguous()
 
     block_h = _sparse_block_h(num_heads)
+    # prefill-only BLOCK_H override (env-gated; decode + ragged paths untouched):
+    # TP1 ranks hold 64 heads; BLOCK_H=16 makes the BLOCK_M=8 q tile exceed
+    # sm_80 163KB smem. 8 halves the tile and fits. Validated values only.
+    _pref_env_h = int(os.environ.get('VLLM_PREFILL_BLOCK_H', '0') or 0)
+    if _pref_env_h in (8, 16) and num_heads % _pref_env_h == 0:
+        block_h = _pref_env_h
     block_d = triton.next_power_of_2(head_dim)
     block_k = _prefill_block_k(head_dim)
     # The kernel loads its q/kv/out tiles unmasked in the head and dim

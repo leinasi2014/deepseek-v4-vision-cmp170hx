@@ -108,6 +108,8 @@ def _compute_global_target_argmax(
         mask=blocks_mask,
         other=float("-inf"),
     )
+    # vllm#50183: NaN breaks tl.argmax index bounds -> OOB read of local argmax.
+    local_max = tl.where(local_max != local_max, float("-inf"), local_max)
     max_block_idx = tl.argmax(local_max, axis=0)
     return tl.load(
         target_local_argmax_ptr + logit_idx * target_local_argmax_stride + max_block_idx
@@ -848,6 +850,13 @@ def _insert_resampled_kernel(
         resampled_local_max_ptr + req_idx * resampled_local_max_stride + block,
         mask=mask,
         other=float("-inf"),
+    )
+    # vllm#50183: NaN max values make tl.argmax return an out-of-range block
+    # index (into the padded region), causing an OOB read. Map NaN to -inf.
+    resampled_local_max = tl.where(
+        resampled_local_max != resampled_local_max,
+        float("-inf"),
+        resampled_local_max,
     )
     resampled_max_block_idx = tl.argmax(resampled_local_max, axis=0)
     resampled = tl.load(

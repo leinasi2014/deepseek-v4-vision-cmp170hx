@@ -203,6 +203,17 @@ class DSparkSpeculator(DFlashSpeculator):
                 draft_sampled_i = self.model.map_draft_to_target(
                     logits_i.argmax(dim=-1)
                 )
+            # Harden the sampled id the way the fused markov path's
+            # target_limit clamp does: a NaN / all--inf logits row (hot-tail
+            # activations on stock weights) makes gumbel_sample / argmax
+            # emit an out-of-range or non-finite id, and the next step's
+            # markov_embed(prev) turns that into an indexSelect
+            # device-side assert. No-op on valid ids.
+            if draft_sampled_i.is_floating_point():
+                draft_sampled_i = torch.nan_to_num(draft_sampled_i, nan=0.0)
+            draft_sampled_i = draft_sampled_i.clamp_(
+                min=0, max=self.vocab_size - 1
+            )
             self.draft_tokens[:num_reqs, i] = draft_sampled_i
             prev = draft_sampled_i
 
