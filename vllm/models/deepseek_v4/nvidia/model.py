@@ -1214,12 +1214,20 @@ class DeepseekV4Model(nn.Module, EagleModelMixin):
                     dtype=dtype,
                     device=device,
                 ),
+                # Vision/hash MoE routing depends on the raw token id at every
+                # PP stage. vLLM deliberately clears the top-level input_ids on
+                # non-first ranks, so carry it alongside hidden_states.
+                "input_ids": torch.zeros(
+                    (batch_size,),
+                    dtype=torch.int64,
+                    device=device,
+                ),
             }
         )
 
     def forward(
         self,
-        input_ids: torch.Tensor,
+        input_ids: torch.Tensor | None,
         positions: torch.Tensor,
         intermediate_tensors: IntermediateTensors | None,
         inputs_embeds: torch.Tensor | None = None,
@@ -1228,12 +1236,14 @@ class DeepseekV4Model(nn.Module, EagleModelMixin):
             if inputs_embeds is not None:
                 hidden_states = inputs_embeds
             else:
+                assert input_ids is not None
                 hidden_states = self.embed_input_ids(input_ids)
         else:
             assert intermediate_tensors is not None
             hidden_states = intermediate_tensors["hidden_states"]
+            input_ids = intermediate_tensors["input_ids"]
 
-        if self.use_mega_moe:
+        if input_ids is not None:
             input_ids = input_ids.to(torch.int64)
 
         residual, post_mix, res_mix = None, None, None
@@ -1272,7 +1282,13 @@ class DeepseekV4Model(nn.Module, EagleModelMixin):
                 )
 
         if not get_pp_group().is_last_rank:
-            return IntermediateTensors({"hidden_states": hidden_states})
+            if input_ids is None:
+                # Text-only configurations that do not use token-dependent
+                # routing may legally enter through inputs_embeds alone.
+                input_ids = torch.zeros_like(positions, dtype=torch.int64)
+            return IntermediateTensors(
+                {"hidden_states": hidden_states, "input_ids": input_ids}
+            )
 
         if self._mtp_hidden_buffer is not None:
             num_tokens = hidden_states.shape[0]
