@@ -32,7 +32,7 @@ class PendingRecv:
     gen_at_receive_np: np.ndarray  # [num_reqs]
     # Spec decode: proposed draft tokens relayed from the last rank, scattered
     # into the non-last rank's req_states.draft_tokens on consume. None when spec
-    # is off (max_sample_len == 1).
+    # relay is disabled.
     draft_tokens: torch.Tensor | None = None  # [num_reqs, max_sample_len - 1]
 
 
@@ -64,11 +64,16 @@ class PPHandler:
     """
 
     def __init__(
-        self, max_num_reqs: int, num_speculative_steps: int, device: torch.device
+        self,
+        max_num_reqs: int,
+        num_speculative_steps: int,
+        device: torch.device,
+        relay_draft_tokens: bool = False,
     ):
         self.is_last_rank = get_pp_group().is_last_rank
         self.last_rank = get_pp_group().last_rank
         self.max_sample_len = num_speculative_steps + 1
+        self.relay_draft_tokens = relay_draft_tokens
         self.device = device
         self.main_stream = torch.cuda.current_stream(device)
         self.broadcast_stream = torch.cuda.Stream(device)
@@ -158,7 +163,8 @@ class PPHandler:
             # relayed by the last rank (matches broadcast_draft's order). NCCL
             # matches by op order on the communicator; the deferred event covers it.
             draft_tokens = None
-            if self.max_sample_len > 1:
+            if self.relay_draft_tokens:
+                assert self.max_sample_len > 1
                 draft_tokens = torch.empty(
                     num_reqs,
                     self.max_sample_len - 1,
@@ -246,8 +252,9 @@ class PPHandler:
         stay matched across ranks. Without this, non-last ranks verify against a
         zero-init req_states.draft_tokens (near-zero acceptance, corrupt output)."""
         assert self.is_last_rank
-        if self.max_sample_len <= 1:
+        if not self.relay_draft_tokens:
             return
+        assert self.max_sample_len > 1
         if compute_need_sampled_mask(input_batch) is None:
             # No request needs sampled outputs next step; `broadcast` skipped too,
             # so skip here to keep the per-step broadcast count matched.
