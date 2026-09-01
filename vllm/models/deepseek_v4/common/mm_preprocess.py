@@ -22,7 +22,7 @@ reference's out-of-vocab scheme.
 
 import math
 from collections.abc import Mapping, Sequence
-from typing import Any, cast
+from typing import Any, NamedTuple, cast
 
 import numpy as np
 import torch
@@ -47,9 +47,67 @@ from vllm.multimodal.processing.processor import (
     MultiModalPromptUpdatesApplyResult,
     PlaceholderFeaturesInfo,
     UpdateMode,
-    _plan_prompt_updates,
 )
 from vllm.transformers_utils.configs.deepseek_v4 import DeepseekV4Config
+
+try:
+    from vllm.multimodal.processing.processor import _plan_prompt_updates
+except ImportError:
+    # Compatibility for the old fast vLLM base. It has the same resolved
+    # prompt-update model but applies matches while rendering instead of first
+    # exposing a plan. Reuse its conflict-resolution helpers and return the
+    # small object shape consumed by this Vision-specific renderer.
+    from vllm.multimodal.processing.processor import _all_items_found, _find_matches
+
+    class _MatchedPromptUpdate(NamedTuple):
+        priority: int
+        update: Any
+        update_idx: int
+        match: Any
+
+    def _plan_prompt_updates(
+        prompt: list[int],
+        mm_prompt_updates: MultiModalPromptUpdates,
+    ) -> tuple[list[_MatchedPromptUpdate], MultiModalPromptUpdatesApplyResult]:
+        result: MultiModalPromptUpdatesApplyResult = {
+            modality: [None] * len(items)
+            for modality, items in mm_prompt_updates.items()
+        }
+        planned: list[_MatchedPromptUpdate] = []
+        item_counts = {
+            modality: len(items) for modality, items in mm_prompt_updates.items()
+        }
+        prev_end_idx = 0
+        priority = 0
+
+        while True:
+            mode, matches = _find_matches(
+                prompt,
+                mm_prompt_updates,
+                None,
+                prev_end_idx=prev_end_idx,
+                current_result=result,
+            )
+            if mode is None:
+                break
+
+            for (modality, item_idx), (match, update_idx) in matches:
+                update = mm_prompt_updates[modality][item_idx][update_idx]
+                planned.append(
+                    _MatchedPromptUpdate(priority, update, update_idx, match)
+                )
+                result[modality][item_idx] = update_idx
+                prev_end_idx = match.end_idx
+                priority += 1
+
+            found_counts = {
+                modality: sum(value is not None for value in values)
+                for modality, values in result.items()
+            }
+            if _all_items_found(item_counts, found_counts):
+                break
+
+        return planned, result
 
 IMAGE_START, IMAGE_PAD, IMAGE, IMAGE_NEW_LINE, IMAGE_END = range(5)
 COMPRESS_PAD_TO = 4

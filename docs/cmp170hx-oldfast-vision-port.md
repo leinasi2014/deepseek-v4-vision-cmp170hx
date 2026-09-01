@@ -78,6 +78,13 @@ changes:
     non-causal width and add per-token image visibility plus safe padding-row
     clearing.
 
+The old multimodal processor predates the newer private
+`_plan_prompt_updates` API. `common/mm_preprocess.py` therefore contains a
+small compatibility planner that reuses the old processor's own
+`_find_matches` and `_all_items_found` conflict-resolution helpers. This keeps
+the compatibility change local to DSV4 Vision instead of replacing the global
+multimodal processor.
+
 New Vision modules are copied from the validated official stack:
 
 - `vllm/models/deepseek_v4/common/mm_preprocess.py`
@@ -120,11 +127,13 @@ match.
 - `git diff --check`: pass;
 - Python `compileall`: pass;
 - Ruff undefined-name/import checks (`F` family): pass;
-- host import audit: PyTorch and base `vllm` import successfully when the
-  installed `_C_stable_libtorch` is exposed to the source tree; the Vision
-  import then reaches the next absent source-tree artifact, the compiled
-  FlashAttention extension. The complete native import gate therefore belongs
-  inside the immutable rebuilt image.
+- host import audit: pass for base `vllm`, the Vision model wrapper, and the
+  Vision preprocessing module when the host's matching `_C_stable_libtorch`
+  and FlashAttention extensions are temporarily exposed to the source tree;
+- two-image ordered prompt-planning/sentinel compatibility smoke: pass;
+- the five selected pytest suites are included in the branch but were not run
+  on the host because that virtual environment has no `pytest`; they remain a
+  mandatory gate inside the immutable rebuilt image.
 
 No model container, benchmark, or production endpoint change is part of this
 source-port commit.
