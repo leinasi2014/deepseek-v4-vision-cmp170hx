@@ -46,6 +46,31 @@ def test_none_overrides_fall_back_to_arch_mapping():
 
 
 @pytest.mark.cpu_test
+def test_deepseek_v4_dspark_uses_trained_block_size():
+    config = _make_hf_config(
+        architectures=["DeepSeekV4MTPModel"],
+        model_type="deepseek_mtp",
+        n_predict=3,
+        dspark_block_size=5,
+    )
+
+    SpeculativeConfig._normalize_deepseek_v4_dspark_hf_config(config)
+
+    assert config.model_type == "deepseek_v4"
+    assert config.architectures == ["DSparkDraftModel"]
+    assert config.n_predict == 5
+
+
+@pytest.mark.cpu_test
+@pytest.mark.parametrize("block_size", [None, 0, True])
+def test_deepseek_v4_dspark_rejects_invalid_block_size(block_size):
+    config = _make_hf_config(dspark_block_size=block_size)
+
+    with pytest.raises(ValueError, match="positive integer dspark_block_size"):
+        SpeculativeConfig._normalize_deepseek_v4_dspark_hf_config(config)
+
+
+@pytest.mark.cpu_test
 def test_callable_overrides_reach_the_draft_config():
     """A callable override (config-to-config transform) composes with the
     architecture-mapping override and is applied to the draft config."""

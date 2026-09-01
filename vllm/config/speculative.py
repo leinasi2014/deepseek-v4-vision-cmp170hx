@@ -663,6 +663,27 @@ class SpeculativeConfig:
         )
 
     @staticmethod
+    def _normalize_deepseek_v4_dspark_hf_config(
+        hf_config: PretrainedConfig,
+    ) -> None:
+        block_size = getattr(hf_config, "dspark_block_size", None)
+        if (
+            not isinstance(block_size, int)
+            or isinstance(block_size, bool)
+            or block_size <= 0
+        ):
+            raise ValueError(
+                "DeepSeek-V4 DSpark requires a positive integer "
+                "dspark_block_size in the checkpoint config."
+            )
+
+        hf_config.model_type = "deepseek_v4"
+        hf_config.architectures = ["DSparkDraftModel"]
+        # num_nextn_predict_layers describes the checkpoint's MTP depth;
+        # DSpark emits the separately trained block width per draft call.
+        hf_config.n_predict = block_size
+
+    @staticmethod
     def _is_custom_proposer_path(model: str | None) -> bool:
         """True if ``model`` is a dotted import path (e.g. ``pkg.MyProposer``)."""
         if model is None:
@@ -958,10 +979,9 @@ class SpeculativeConfig:
                 ):
                     # DeepSeek-V4 DSpark reuses the full DeepSeek-V4 config
                     # and its weights ship in the target checkpoint.
-                    self.draft_model_config.hf_config.model_type = "deepseek_v4"
-                    self.draft_model_config.hf_config.architectures = [
-                        "DSparkDraftModel"
-                    ]
+                    SpeculativeConfig._normalize_deepseek_v4_dspark_hf_config(
+                        self.draft_model_config.hf_config
+                    )
                     self.update_arch_()
                 elif (
                     self.method == "dspark"
