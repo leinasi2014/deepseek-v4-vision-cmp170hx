@@ -1183,8 +1183,16 @@ __global__ void __launch_bounds__(FILTERED_TOPK_BLOCK_THREADS)
 
   if (bid >= num_rows) return;
 
-  const int length =
+  // The dispatcher can route short rows through this single-CTA fallback,
+  // bypassing persistent_topk_kernel's per-row clamp. Keep the same contract
+  // here: negative padding lengths become zero and malformed lengths cannot
+  // read beyond the physical row width.
+  const int raw_length =
       (lengths != nullptr) ? lengths[bid] : static_cast<int>(max_len);
+  const int non_negative_length = raw_length > 0 ? raw_length : 0;
+  const int length = non_negative_length < static_cast<int>(max_len)
+                         ? non_negative_length
+                         : static_cast<int>(max_len);
   const DType* score = input + bid * max_len;
   IdType* dst = output + bid * top_k;
 
