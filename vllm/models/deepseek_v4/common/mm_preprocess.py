@@ -52,12 +52,16 @@ from vllm.transformers_utils.configs.deepseek_v4 import DeepseekV4Config
 
 try:
     from vllm.multimodal.processing.processor import _plan_prompt_updates
+
+    _OLD_FAST_MM_PROCESSOR_API = False
 except ImportError:
     # Compatibility for the old fast vLLM base. It has the same resolved
     # prompt-update model but applies matches while rendering instead of first
     # exposing a plan. Reuse its conflict-resolution helpers and return the
     # small object shape consumed by this Vision-specific renderer.
     from vllm.multimodal.processing.processor import _all_items_found, _find_matches
+
+    _OLD_FAST_MM_PROCESSOR_API = True
 
     class _MatchedPromptUpdate(NamedTuple):
         priority: int
@@ -449,6 +453,44 @@ class DeepseekV4VLDummyInputsBuilder(
 class DeepseekV4VLMultiModalProcessor(
     BaseMultiModalProcessor[DeepseekV4VLProcessingInfo]
 ):
+    def _call_hf_processor(
+        self,
+        prompt: str,
+        mm_data: Mapping[str, object],
+        mm_kwargs: Mapping[str, object],
+        tok_kwargs: Mapping[str, object],
+    ) -> BatchFeature:
+        """Bridge the old-fast fused text/MM processor contract.
+
+        ``DeepseekV4VLProcessor`` intentionally processes only images. Newer
+        vLLM tokenizes the prompt separately, but the old-fast base expects a
+        fused processor result containing ``input_ids``. Preserve the image
+        outputs and add the independently tokenized prompt for that older API.
+        """
+        processed_outputs = super()._call_hf_processor(
+            prompt=prompt,
+            mm_data=mm_data,
+            mm_kwargs=mm_kwargs,
+            tok_kwargs=tok_kwargs,
+        )
+        if "input_ids" not in processed_outputs:
+            tokenizer_kwargs = dict(tok_kwargs)
+            tokenizer_kwargs["return_tensors"] = "pt"
+            tokenized = self.info.get_tokenizer()(prompt, **tokenizer_kwargs)
+            processed_outputs["input_ids"] = tokenized["input_ids"]
+        return processed_outputs
+
+    def _hf_processor_applies_updates(
+        self,
+        prompt_text: str,
+        mm_items: MultiModalDataItems,
+        hf_processor_mm_kwargs: Mapping[str, object],
+        tokenization_kwargs: Mapping[str, object],
+    ) -> bool:
+        # The custom processor ignores ``text`` and never expands image
+        # placeholders; vLLM must apply this class's sentinel replacements.
+        return False
+
     def _get_mm_fields_config(
         self,
         hf_inputs: BatchFeature,
@@ -550,9 +592,12 @@ class DeepseekV4VLMultiModalProcessor(
 
             if tokens:
                 content_is_embed = update.content.is_embed
-                is_embed = (
-                    content_is_embed(tokens) if content_is_embed is not None else None
-                )
+                if content_is_embed is None:
+                    is_embed = None
+                elif _OLD_FAST_MM_PROCESSOR_API:
+                    is_embed = content_is_embed(self.info.get_tokenizer(), tokens)
+                else:
+                    is_embed = content_is_embed(tokens)
                 placeholders[update.modality].append(
                     PlaceholderFeaturesInfo(
                         modality=update.modality,
@@ -568,3 +613,30 @@ class DeepseekV4VLMultiModalProcessor(
 
         new_token_ids.extend(token_ids[prev_end_idx:])
         return new_token_ids, result, placeholders
+
+    def _apply_prompt_updates(
+        self,
+        token_ids: list[int],
+        mm_prompt_updates: MultiModalPromptUpdates,
+    ) -> tuple[list[int], Mapping[str, list[PlaceholderFeaturesInfo]]]:
+        """Use the position-aware image padding path on old-fast vLLM too.
+
+        Newer vLLM dispatches through
+        ``_apply_token_matches_with_placeholders``. The old-fast base instead
+        owns ``_apply_prompt_updates`` and would otherwise bypass the custom
+        compressor-alignment padding entirely.
+        """
+        new_token_ids, match_result, placeholders = (
+            self._apply_token_matches_with_placeholders(
+                token_ids,
+                mm_prompt_updates,
+            )
+        )
+        for modality, update_idxs in match_result.items():
+            for item_idx, update_idx in enumerate(update_idxs):
+                if update_idx is None:
+                    raise RuntimeError(
+                        "Failed to apply DeepSeek-V4 vision prompt replacement "
+                        f"for mm_items[{modality!r}][{item_idx}]"
+                    )
+        return new_token_ids, placeholders
