@@ -42,12 +42,14 @@ def get_deepseek_v4_tokenizer(tokenizer: HfTokenizer) -> HfTokenizer:
 
             reasoning_effort = kwargs.get("reasoning_effort")
             if not isinstance(reasoning_effort, str):
-                reasoning_effort = None
+                reasoning_effort = "high" if thinking else None
             elif reasoning_effort == "none":
                 thinking_mode = "chat"
                 reasoning_effort = None
-            elif reasoning_effort in ("max", "xhigh"):
+            elif reasoning_effort == "max":
                 reasoning_effort = "max"
+            elif reasoning_effort in ("low", "minimal", "medium"):
+                reasoning_effort = "low"
             else:
                 reasoning_effort = "high"
 
