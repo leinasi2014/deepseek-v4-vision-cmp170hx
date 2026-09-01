@@ -1041,7 +1041,21 @@ __global__ void __launch_bounds__(kThreadsPerBlock, 2)
     uint32_t row_idx = group_id + iter * num_groups;
     if (row_idx >= params.num_rows) break;
 
-    const uint32_t seq_len = params.lengths[row_idx];
+    // Clamp the row length before any decision is made on it.
+    //
+    // `lengths` is int32 and is consumed here as uint32, so a negative value
+    // would reinterpret as ~4e9 and force the cooperative radix path. Values
+    // beyond the physical row stride would also read into the next row.
+    // Bounding by max_seq_len keeps this per-row decision consistent with the
+    // non-leader CTA early exit above and prevents a leader from waiting on
+    // peer CTAs that have already returned.
+    const int32_t raw_len = params.lengths[row_idx];
+    const uint32_t row_bound =
+        params.stride < params.max_seq_len ? params.stride : params.max_seq_len;
+    const uint32_t non_negative_len =
+        raw_len > 0 ? static_cast<uint32_t>(raw_len) : 0u;
+    const uint32_t seq_len =
+        non_negative_len < row_bound ? non_negative_len : row_bound;
     int32_t* row_output = params.output + row_idx * params.top_k;
     const float* row_input = params.input + row_idx * params.stride;
 

@@ -58,9 +58,12 @@ def _prepare_uniform_decode_kernel(
     req_id = idx // max_decode_len
     local_idx = idx % max_decode_len
 
-    # Compute number of KVs attended to by this token.
+    # Compute number of KVs attended to by this token. Padding requests have
+    # seq_len == 0, which would otherwise make the first token of each padded
+    # request negative (e.g. next_n=2 gives 0-2+0+1 = -1). Downstream kernels
+    # read these as uint32, turning -1 into ~4e9.
     seq_len = tl.load(seq_lens_ptr + req_id)
-    per_token_seq_len = seq_len - max_decode_len + local_idx + 1
+    per_token_seq_len = tl.maximum(seq_len - max_decode_len + local_idx + 1, 0)
     tl.store(decode_seq_lens_ptr + idx, per_token_seq_len)
 
     # Copy block table row.
@@ -967,12 +970,15 @@ class DeepseekV32IndexerMetadataBuilder(AttentionMetadataBuilder):
                 seq_lens_buffer = self.decode_seq_lens_buffer[
                     : num_decodes * max_decode_len
                 ].view(num_decodes, max_decode_len)
+                # Padding requests have seq_len == 0. Clamp their per-token
+                # lengths so the sparse top-k kernels never reinterpret a
+                # negative int32 as a multi-billion uint32 row length.
                 seq_lens_buffer[:] = (
                     seq_lens.unsqueeze(1)
                     - max_decode_len
                     + 1
                     + self.offsets_buffer[:max_decode_len]
-                )
+                ).clamp_(min=0)
                 seq_lens = seq_lens_buffer
             return seq_lens, block_table, decode_lens, num_decodes, requires_padding
 
