@@ -507,7 +507,6 @@ class DeepseekV4ModelArchConfigConvertor(ModelArchConfigConvertorBase):
         self,
         hf_config: PretrainedConfig,
         hf_text_config: PretrainedConfig,
-        revision: str | None = None,
     ):
         # DeepSeek-V4-Flash-Vision-Exp ships the same architectures/model_type
         # as the text-only DeepSeek-V4-Flash; route to the VL wrapper class
@@ -524,7 +523,7 @@ class DeepseekV4ModelArchConfigConvertor(ModelArchConfigConvertorBase):
             and not getattr(hf_config, "_dsv4_vl_inner", False)
         ):
             hf_config.architectures = ["DeepseekV4ForConditionalGeneration"]
-        super().__init__(hf_config, hf_text_config, revision)
+        super().__init__(hf_config, hf_text_config)
 
     def is_mm_prefix_lm(self, supports_multimodal: bool = True) -> bool:
         # The vision variant needs the mm-prefix plumbing: it makes the
