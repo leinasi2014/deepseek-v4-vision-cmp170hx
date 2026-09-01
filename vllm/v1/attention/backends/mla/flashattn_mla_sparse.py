@@ -202,6 +202,7 @@ class FlashAttnMLASparseImpl(SparseMLACommonImpl[FlashAttnMLASparseMetadata]):
             topk_indices_buffer=topk_indices_buffer,
             **mla_args,
         )
+        self._indexer = indexer
         assert self.topk_indices_buffer is not None, (
             "Indexer or topk_indices_buffer required for sparse MLA"
         )
@@ -221,8 +222,13 @@ class FlashAttnMLASparseImpl(SparseMLACommonImpl[FlashAttnMLASparseMetadata]):
         q_nope, q_rope = q
         num_actual_toks = q_rope.shape[0]
 
-        assert self.topk_indices_buffer is not None
-        topk_indices = self.topk_indices_buffer[:num_actual_toks]
+        buf = (
+            self._indexer.topk_indices_buffer
+            if self._indexer is not None
+            else self.topk_indices_buffer
+        )
+        assert buf is not None, "topk_indices_buffer required for sparse MLA"
+        topk_indices = buf[:num_actual_toks]
         topk_indices, valid_counts = triton_convert_req_index_to_global_index(
             attn_metadata.req_id_per_token[:num_actual_toks],
             attn_metadata.block_table,
