@@ -234,6 +234,31 @@ def _fp8_paged_mqa_logits_kernel(
     )
 
 
+def _normalize_paged_context_lens(
+    context_lens: torch.Tensor, batch_size: int, next_n: int
+) -> torch.Tensor:
+    """Collapse native spec-decode lengths to one final length per request."""
+    if context_lens.ndim == 2:
+        if tuple(context_lens.shape) != (batch_size, next_n):
+            raise ValueError(
+                "context_lens must have shape [B, next_n] matching q; "
+                f"got {tuple(context_lens.shape)} for "
+                f"q[:2]={(batch_size, next_n)}"
+            )
+        return context_lens[:, -1].contiguous()
+    if context_lens.ndim == 1:
+        if context_lens.shape[0] != batch_size:
+            raise ValueError(
+                "context_lens must have shape [B]; "
+                f"got {tuple(context_lens.shape)} for B={batch_size}"
+            )
+        return context_lens.contiguous()
+    raise ValueError(
+        "context_lens must be 1-D or 2-D; "
+        f"got ndim={context_lens.ndim}"
+    )
+
+
 def fp8_paged_mqa_logits_triton(
     q: torch.Tensor,
     kv_cache: torch.Tensor,
@@ -249,7 +274,9 @@ def fp8_paged_mqa_logits_triton(
         q:             [B, next_n, H, D] fp8_e4m3fn
         kv_cache:      [num_blocks, block_size, 1, D+4] uint8 (FP8 + fp32 scale)
         weights:       [B*next_n, H] float32
-        context_lens:  [B] int32
+        context_lens:  [B] or [B, next_n] int32. Native speculative
+            decode supplies per-token lengths; the final column is the total
+            context length used by this kernel's q-offset arithmetic.
         block_tables:  [B, max_blocks] int32
         max_model_len: output width. Caller passes the active batch max so
             the logits buffer and grid stay tight.
@@ -262,6 +289,14 @@ def fp8_paged_mqa_logits_triton(
     _, block_size, one, d_plus_4 = kv_cache.shape
     assert one == 1
     assert d_plus_4 == head_dim + 4
+
+    # DeepGEMM consumes native speculative-decode lengths as [B, next_n],
+    # while this Triton kernel indexes one scalar per request and derives the
+    # individual query offsets as `final_len - next_n + next_n_id`. Passing a
+    # 2-D tensor through unchanged makes pointer arithmetic read the first B
+    # flattened elements instead of one value per row. Match the established
+    # XPU fallback and collapse to each request's final length.
+    context_lens = _normalize_paged_context_lens(context_lens, B, next_n)
 
     # Cache layout from `indexer_k_quant_and_cache`: per block, FP8 K bytes
     # (block_size * head_dim) followed by fp32 scales (block_size * 4). The

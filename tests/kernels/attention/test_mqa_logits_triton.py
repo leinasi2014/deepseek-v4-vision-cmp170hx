@@ -9,6 +9,7 @@ from vllm.platforms import current_platform
 from vllm.utils.math_utils import cdiv
 from vllm.v1.attention.ops import mqa_logits_triton as mqa_logits_mod
 from vllm.v1.attention.ops.mqa_logits_triton import (
+    _normalize_paged_context_lens,
     fp8_mqa_logits_triton,
     fp8_paged_mqa_logits_triton,
 )
@@ -17,6 +18,43 @@ pytestmark = pytest.mark.skipif(
     not current_platform.is_cuda_alike(),
     reason="Triton MQA logits kernels require CUDA/ROCm",
 )
+
+
+def test_normalize_paged_context_lens_accepts_native_and_flat_shapes():
+    native = torch.tensor(
+        [[10, 11, 12, 13], [20, 21, 22, 23]], dtype=torch.int32
+    )
+    normalized = _normalize_paged_context_lens(native, batch_size=2, next_n=4)
+    torch.testing.assert_close(normalized, torch.tensor([13, 23], dtype=torch.int32))
+    assert normalized.is_contiguous()
+
+    flat_noncontiguous = torch.tensor(
+        [[13, -1], [23, -1]], dtype=torch.int32
+    )[:, 0]
+    assert not flat_noncontiguous.is_contiguous()
+    normalized_flat = _normalize_paged_context_lens(
+        flat_noncontiguous, batch_size=2, next_n=4
+    )
+    torch.testing.assert_close(
+        normalized_flat, torch.tensor([13, 23], dtype=torch.int32)
+    )
+    assert normalized_flat.is_contiguous()
+
+
+@pytest.mark.parametrize(
+    "bad,batch_size,next_n,error",
+    [
+        (torch.zeros(2, 3, dtype=torch.int32), 2, 4, "shape [B, next_n]"),
+        (torch.zeros(3, dtype=torch.int32), 2, 4, "shape [B]"),
+        (torch.zeros((), dtype=torch.int32), 1, 1, "1-D or 2-D"),
+        (torch.zeros(1, 1, 1, dtype=torch.int32), 1, 1, "1-D or 2-D"),
+    ],
+)
+def test_normalize_paged_context_lens_rejects_bad_shapes(
+    bad: torch.Tensor, batch_size: int, next_n: int, error: str
+):
+    with pytest.raises(ValueError, match=error.replace("[", r"\[").replace("]", r"\]")):
+        _normalize_paged_context_lens(bad, batch_size, next_n)
 
 
 def _quantize_k_per_row(
@@ -373,6 +411,70 @@ def test_fp8_paged_mqa_logits_triton_matches_torch(
             atol=_ATOL,
             rtol=_RTOL,
         )
+
+
+def test_fp8_paged_mqa_logits_triton_native_2d_context_lens():
+    """Native speculative lengths are [B, next_n], while the Triton kernel
+    consumes one final length per request. B>1 makes a flattened-pointer bug
+    observable because request 1 would otherwise read request 0's second token.
+    """
+    torch.manual_seed(0)
+    batch_size, next_n, num_heads, head_dim = 2, 4, 16, 128
+    block_size = 64
+    total_blocks = 16
+    device = "cuda"
+
+    final_lens = torch.tensor([130, 257], dtype=torch.int32, device=device)
+    step_back = torch.arange(
+        next_n - 1, -1, -1, dtype=torch.int32, device=device
+    )
+    native_lens = final_lens[:, None] - step_back[None, :]
+    assert native_lens.tolist() == [[127, 128, 129, 130], [254, 255, 256, 257]]
+
+    max_model_len = int(final_lens.max().item())
+    max_blocks = cdiv(max_model_len, block_size)
+    kv_packed = _pack_paged_kv(
+        torch.randn(
+            total_blocks,
+            block_size,
+            head_dim,
+            dtype=torch.bfloat16,
+            device=device,
+        )
+    )
+    q_fp8 = torch.randn(
+        batch_size,
+        next_n,
+        num_heads,
+        head_dim,
+        dtype=torch.bfloat16,
+        device=device,
+    ).to(torch.float8_e4m3fn)
+    weights = torch.randn(
+        batch_size * next_n, num_heads, dtype=torch.float32, device=device
+    )
+    block_tables = torch.randint(
+        0,
+        total_blocks,
+        (batch_size, max_blocks),
+        dtype=torch.int32,
+        device=device,
+    )
+
+    expected = _fp8_paged_mqa_logits_ref(
+        q_fp8, kv_packed, weights, final_lens, block_tables, max_model_len
+    )
+    actual = fp8_paged_mqa_logits_triton(
+        q_fp8, kv_packed, weights, native_lens, block_tables, max_model_len
+    )
+
+    expected_inf = torch.isinf(expected) & (expected < 0)
+    actual_inf = torch.isinf(actual) & (actual < 0)
+    assert torch.equal(expected_inf, actual_inf)
+    finite = ~expected_inf
+    torch.testing.assert_close(
+        actual[finite], expected[finite], atol=_ATOL, rtol=_RTOL
+    )
 
 
 def test_fp8_paged_mqa_logits_triton_strided_pool_no_int32_overflow():
