@@ -30,6 +30,42 @@ method and results are documented in [VALIDATION.md](docs/cmp170hx/VALIDATION.md
 The sanitized per-request and per-GPU measurements are available in the
 [machine-readable test dataset](benchmarks/results/cmp170hx-pp4-fix7-2026-09-02/README.md).
 
+## Latest Fix7 benchmark
+
+Measured on 2026-09-02 with the validated PP4 profile above. Every arm used
+the same model, hardware, prompts, DSpark settings, and requested output
+length. The ordinary decode result is the mean post-TTFT rate from 12 measured
+requests per arm, each forced to exactly 400 completion tokens. Warm-up was
+excluded.
+
+| Arm | `BLOCK_H` | CUDA graph | Mean decode | Exact 10K prefill | Decode after 10K | DSpark acceptance |
+|---|---:|---|---:|---:|---:|---:|
+| B0 | 0 | breakable | 75.13 tok/s | 3834.54 tok/s | 82.57 tok/s | 27.43% |
+| **B8** | **8** | **breakable** | **77.30 tok/s** | **4224.96 tok/s** | **92.54 tok/s** | **28.16%** |
+| CG | 8 | explicit bounded | 73.52 tok/s | 2731.47 tok/s | 106.51 tok/s | 26.63% |
+| CGR | 8 | explicit bounded + Ring/Simple | 72.96 tok/s | 2818.12 tok/s | 106.21 tok/s | 26.23% |
+
+Recommended B8 details:
+
+| Measurement | Result |
+|---|---:|
+| Fixed-token requests | 12 x 400 completion tokens |
+| Mean E2E completion rate | 75.07 tok/s |
+| Mean post-TTFT decode | 77.30 tok/s |
+| Chinese post-TTFT mean | 78.19 tok/s |
+| English post-TTFT mean | 76.41 tok/s |
+| Exact 10K prefill | 4224.96 prompt tok/s |
+| 192-token decode after exact 10K context | 92.54 tok/s |
+| DSpark weighted acceptance | 28.16% (2802 / 9950) |
+| Startup time | 444 s |
+
+B8 mean GPU utilization across PP stages was 87.7%, 83.3%, 65.4%, and
+47.8%; the corresponding peak temperatures were 75°C, 69°C, 65°C, and 62°C.
+All four arms passed the 1M service-contract, exact-400-token, exact-10K,
+vision, invalid-image HTTP 400, fatal-log, and P2P/CUMEM gates. A full 1M
+request was not run. See the [complete 48-request CSV and GPU data](benchmarks/results/cmp170hx-pp4-fix7-2026-09-02/README.md)
+for every sample and the metric definitions.
+
 ## What this fork adds
 
 - DeepSeek-V4 Flash sparse MLA kernels and Ampere/SM80 routing.
