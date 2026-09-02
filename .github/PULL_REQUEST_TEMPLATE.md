@@ -1,20 +1,18 @@
-<!-- markdownlint-disable -->
-PLEASE FILL IN THE PR DESCRIPTION HERE ENSURING ALL CHECKLIST ITEMS (AT THE BOTTOM) HAVE BEEN CONSIDERED.
+## Summary
 
-## Purpose
+## Hardware/model profile
 
-## Test Plan
+## Correctness gates
 
-## Test Result
+## Fixed-token performance evidence
 
----
-<details>
-<summary> Essential Elements of an Effective PR Description Checklist </summary>
+## Rollback
 
-- [ ] The purpose of the PR, such as "Fix some issue (link existing issues this PR will resolve)".
-- [ ] The test plan, such as providing test command.
-- [ ] The test results, such as pasting the results comparison before and after, or e2e results
-- [ ] (Optional) The necessary documentation update, such as updating `supported_models.md` and `examples` for a new model.
-</details>
+## Checklist
 
-**BEFORE SUBMITTING, PLEASE READ <https://docs.vllm.ai/en/latest/contributing>** (anything written below this line will be removed by GitHub Actions)
+- [ ] No model weights, secrets, private addresses, or driver binaries.
+- [ ] Python and native changes are built from one source revision.
+- [ ] Relevant unit tests pass.
+- [ ] Model-affecting changes include text and visual checks.
+- [ ] Performance claims include reproducible fixed-token A/B data.
+- [ ] I reviewed and understand every changed line, including AI-assisted changes.

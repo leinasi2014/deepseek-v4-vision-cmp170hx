@@ -1,0 +1,43 @@
+name: CMP170HX / DSV4 bug report
+description: Report a reproducible problem in the validated hardware-specific path.
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Do not include API keys, private addresses, model tokens, driver binaries, or full crash dumps containing secrets.
+  - type: input
+    id: commit
+    attributes:
+      label: Repository commit
+      placeholder: f09e0305445d...
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: GPU count/type, driver, CUDA, image ID, model, TP/PP, context length, and relevant environment variables.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction
+      description: Minimal commands or API payload with secrets removed.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true
+  - type: checkboxes
+    id: gates
+    attributes:
+      label: Hardware gates
+      options:
+        - label: I checked CUDA peer correctness rather than topology alone.
+        - label: I checked NCCL transport and Xid/fatal logs.
+        - label: I confirmed Python and native extensions come from one image revision.

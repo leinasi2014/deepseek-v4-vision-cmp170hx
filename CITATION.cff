@@ -1,0 +1,34 @@
+cff-version: 1.2.0
+message: "If you use this fork, cite this repository and the upstream vLLM paper."
+title: "DeepSeek V4 Vision for CMP 170HX"
+type: software
+authors:
+  - name: "DeepSeek V4 Vision for CMP 170HX contributors"
+repository-code: "https://github.com/leinasi2014/deepseek-v4-vision-cmp170hx"
+license: Apache-2.0
+date-released: 2026-09-02
+preferred-citation:
+  type: conference-paper
+  title: "Efficient Memory Management for Large Language Model Serving with PagedAttention"
+  authors:
+    - family-names: Kwon
+      given-names: Woosuk
+    - family-names: Li
+      given-names: Zhuohan
+    - family-names: Zhuang
+      given-names: Siyuan
+    - family-names: Sheng
+      given-names: Ying
+    - family-names: Zheng
+      given-names: Lianmin
+    - family-names: Yu
+      given-names: Cody Hao
+    - family-names: Gonzalez
+      given-names: Joseph E.
+    - family-names: Zhang
+      given-names: Hao
+    - family-names: Stoica
+      given-names: Ion
+  year: 2023
+  conference:
+    name: ACM Symposium on Operating Systems Principles

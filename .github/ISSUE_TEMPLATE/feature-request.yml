@@ -1,0 +1,25 @@
+name: Feature request
+description: Propose a focused improvement to the DeepSeek-V4 Vision SM80 path.
+title: "[Feature]: "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem and target profile
+      description: Explain the model, hardware, parallelism, and workload affected.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: Correctness and performance validation
+      description: Describe fixed-token A/B and rollback gates.
+    validations:
+      required: true

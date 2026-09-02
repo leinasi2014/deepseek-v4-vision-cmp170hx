@@ -1,0 +1,20 @@
+DeepSeek V4 Vision for CMP 170HX
+Copyright 2026 project contributors
+
+This product includes software developed by the vLLM project and its
+contributors, licensed under the Apache License, Version 2.0.
+
+This hardware-specific fork incorporates and adapts publicly documented
+DeepSeek-V4 and CMP170HX research from the following projects:
+
+- https://github.com/vllm-project/vllm
+- https://github.com/allover326/deepseek-v4-cmp170hx
+- https://github.com/tim-odonnell/cmp170hx-deepseek-v4-flash
+- https://github.com/satspace-cpu/cmp170hx-linux-p2p
+
+DeepSeek model names and NVIDIA product names are trademarks of their
+respective owners. This repository is not endorsed by or affiliated with
+DeepSeek, NVIDIA, or the upstream vLLM project.
+
+Model weights, NVIDIA drivers, firmware, and driver-unlock patches are not
+distributed by this repository and may be governed by separate terms.

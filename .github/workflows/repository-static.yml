@@ -1,0 +1,38 @@
+name: repository-static
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  static:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+      - name: Git whitespace check
+        run: git diff --check HEAD~1 HEAD || git diff --check
+      - name: Shell syntax
+        run: bash -n deploy/serve-pp4.sh
+      - name: Compile project-specific Python
+        run: >-
+          uv run --no-project python -m compileall -q
+          vllm/models/deepseek_v4/common/mm_preprocess.py
+          vllm/models/deepseek_v4/nvidia/vl_model.py
+          vllm/tokenizers/deepseek_v4_encoding.py
+          vllm/entrypoints/chat_utils.py
+      - name: Reject private deployment material
+        shell: bash
+        run: |
+          if git grep -En \
+              '(/home/hyl|/samsungssd|192\.168\.3\.|-----BEGIN (RSA |OPENSSH |EC )?PRIVATE KEY-----|gh[pousr]_[A-Za-z0-9]{20,})' \
+              -- . ':!.github/workflows/repository-static.yml'; then
+            echo "private deployment material found"
+            exit 1
+          fi
