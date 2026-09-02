@@ -1,7 +1,8 @@
 # 面向 CMP 170HX 的 DeepSeek V4 Vision
 
 [English](README.md) · [架构说明](docs/cmp170hx/ARCHITECTURE.md) ·
-[部署说明](deploy/README.md) · [实测结果](docs/cmp170hx/VALIDATION.md)
+[部署说明](deploy/README.md) · [实测结果](docs/cmp170hx/VALIDATION.md) ·
+[测试数据](benchmarks/results/cmp170hx-pp4-fix7-2026-09-02/README.md)
 
 这是一个面向 NVIDIA CMP 170HX / SM80 的实验性 vLLM 分支，用于运行
 `deepseek-ai/DeepSeek-V4-Flash-Vision-Exp`。项目把已验证的 SM80
@@ -24,6 +25,8 @@ MLA KV Cache 和 1M 上下文配置合并到同一源码树中。
 当前验证源码发布为提交
 `f00f0eecc41146f79f0545c15612962b66b693c5`。完整固定-token 测试方法与
 结果见 [VALIDATION.md](docs/cmp170hx/VALIDATION.md)。
+最新 Fix7 的四臂汇总、48 次固定 400-token 请求、10K 长上下文、DSpark
+接受率和逐卡统计见[可复算测试数据](benchmarks/results/cmp170hx-pp4-fix7-2026-09-02/README.md)。
 
 ## 主要改造
 

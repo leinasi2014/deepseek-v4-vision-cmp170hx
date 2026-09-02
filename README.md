@@ -1,7 +1,8 @@
 # DeepSeek V4 Vision for CMP 170HX
 
 [中文说明](README.zh-CN.md) · [Architecture](docs/cmp170hx/ARCHITECTURE.md) ·
-[Deployment](deploy/README.md) · [Validation](docs/cmp170hx/VALIDATION.md)
+[Deployment](deploy/README.md) · [Validation](docs/cmp170hx/VALIDATION.md) ·
+[Test data](benchmarks/results/cmp170hx-pp4-fix7-2026-09-02/README.md)
 
 An experimental vLLM fork for serving
 `deepseek-ai/DeepSeek-V4-Flash-Vision-Exp` on NVIDIA CMP 170HX / SM80 GPUs.
@@ -26,6 +27,8 @@ or vLLM release.
 The latest validation source is published as commit
 `f00f0eecc41146f79f0545c15612962b66b693c5`. The complete fixed-token test
 method and results are documented in [VALIDATION.md](docs/cmp170hx/VALIDATION.md).
+The sanitized per-request and per-GPU measurements are available in the
+[machine-readable test dataset](benchmarks/results/cmp170hx-pp4-fix7-2026-09-02/README.md).
 
 ## What this fork adds
 

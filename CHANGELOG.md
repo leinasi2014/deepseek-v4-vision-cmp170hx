@@ -8,6 +8,8 @@
 - PP-safe DSpark speculative decoding and image-token routing.
 - A 1M-context PP4 production profile for CMP 170HX.
 - Reproducible deployment, architecture, and validation documentation.
+- Publish-safe machine-readable Fix7 benchmark data with all 48 fixed-token
+  requests, exact 10K results, DSpark counters, and per-GPU measurements.
 
 ### Fixed
 

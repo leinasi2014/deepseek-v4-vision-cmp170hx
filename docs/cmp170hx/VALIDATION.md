@@ -31,6 +31,15 @@ cache, 1M service contract, prompts, and requested completion lengths.
 A full 1M request was intentionally not performed; 1M refers to the validated
 service configuration, while the long-context performance sample used 10K.
 
+## Machine-readable data
+
+The publish-safe latest Fix7 dataset is in
+[`benchmarks/results/cmp170hx-pp4-fix7-2026-09-02`](../../benchmarks/results/cmp170hx-pp4-fix7-2026-09-02/README.md).
+It includes the four-arm summary, all 48 fixed 400-token requests, exact 10K
+results, DSpark counters, API correctness gates, and per-GPU measurements.
+Host addresses, credentials, local paths, prompts, and full model outputs are
+excluded; per-request output hashes are retained for evidence matching.
+
 ## Four-arm matrix
 
 | Arm | `BLOCK_H` | Graph | NCCL | Start | Mean decode | 10K prefill | 10K decode |
