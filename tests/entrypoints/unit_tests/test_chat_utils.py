@@ -19,6 +19,7 @@ from vllm.entrypoints.chat_utils import (
     AsyncMultiModalItemTracker,
     ConversationMessage,
     _postprocess_messages,
+    _reject_deepseek_v4_image_outside_user_role,
     parse_chat_messages,
     parse_chat_messages_async,
 )
@@ -2805,4 +2806,38 @@ async def test_resolve_items_does_not_leak_tasks_on_partial_failure():
     assert not leaked_tasks, (
         f"resolve_items left {len(leaked_tasks)} task(s) running after "
         f"raising: {leaked_tasks}"
+    )
+
+
+def test_deepseek_v4_vision_rejects_image_before_mm_tracking():
+    config = MagicMock()
+    config.hf_config.model_type = "deepseek_v4"
+    config.hf_config.vision_patch_size = 14
+    image = {
+        "type": "image_url",
+        "image_url": {"url": "data:image/png;base64,AAAA"},
+    }
+
+    for role in ("system", "assistant", "tool", "function"):
+        with pytest.raises(VLLMValidationError, match="user/developer messages only"):
+            _reject_deepseek_v4_image_outside_user_role(role, image, config)
+
+    _reject_deepseek_v4_image_outside_user_role("user", image, config)
+    _reject_deepseek_v4_image_outside_user_role("developer", image, config)
+    _reject_deepseek_v4_image_outside_user_role(
+        "tool", {"type": "text", "text": "quoted <image> marker"}, config
+    )
+
+
+def test_deepseek_v4_vision_role_gate_does_not_change_other_models():
+    config = MagicMock()
+    config.hf_config.model_type = "other"
+    config.hf_config.vision_patch_size = 14
+    _reject_deepseek_v4_image_outside_user_role(
+        "tool",
+        {
+            "type": "image_url",
+            "image_url": {"url": "data:image/png;base64,AAAA"},
+        },
+        config,
     )

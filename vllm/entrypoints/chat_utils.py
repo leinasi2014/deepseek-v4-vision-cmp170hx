@@ -1643,6 +1643,46 @@ def _parse_chat_message_content_mm_part(
     return part_type, "unknown part_type content"
 
 
+_DEEPSEEK_V4_IMAGE_PART_TYPES = frozenset(
+    ("image", "image_url", "input_image", "image_pil", "image_embeds")
+)
+_DEEPSEEK_V4_IMAGE_PART_FIELDS = frozenset(
+    ("image_url", "image_pil", "image_embeds")
+)
+
+
+def _reject_deepseek_v4_image_outside_user_role(
+    role: str,
+    part: ChatCompletionContentPartParam,
+    model_config: ModelConfig,
+) -> None:
+    """Reject structured Vision-Exp images before they enter the MM tracker.
+
+    The DeepSeek-V4 Vision checkpoint supports images in user/developer turns
+    only. This must run before media parsing: rejecting later in the tokenizer
+    leaves a decoded image in ``mm_data`` without a prompt placeholder and
+    turns a client error into an EngineCore 500.
+    """
+    if role in ("user", "developer") or not isinstance(part, dict):
+        return
+    hf_config = model_config.hf_config
+    is_deepseek_v4_vision = (
+        getattr(hf_config, "model_type", None) == "deepseek_v4"
+        and getattr(hf_config, "vision_patch_size", None) is not None
+    )
+    if not is_deepseek_v4_vision:
+        return
+    part_type = part.get("type")
+    if part_type in _DEEPSEEK_V4_IMAGE_PART_TYPES or any(
+        field in part for field in _DEEPSEEK_V4_IMAGE_PART_FIELDS
+    ):
+        raise VLLMValidationError(
+            "DeepSeek-V4 Vision accepts images in user/developer messages only; "
+            f"role {role!r} cannot contain a structured image.",
+            parameter="content",
+        )
+
+
 PART_TYPES_TO_SKIP_NONE_CONTENT = (
     "text",
     "refusal",
@@ -1664,6 +1704,9 @@ def _parse_chat_message_content_parts(
     mm_parser = mm_tracker.create_parser(mm_processor_kwargs=mm_processor_kwargs)
 
     for part in parts:
+        _reject_deepseek_v4_image_outside_user_role(
+            role, part, mm_parser.model_config
+        )
         parse_res = _parse_chat_message_content_part(
             part,
             mm_parser,
