@@ -1,0 +1,5 @@
+arm,model,max_model_len,max_model_len_is_1048576,fixed_requests_all_exact_400,exact_10k_prefill_passed,exact_10k_decode_passed,image_smoke_passed,four_image_offsets_passed,invalid_tool_image_http_status,startup_fatal_matches,runtime_fatal_matches,p2p_cumem_log_occurrences
+B0,DeepSeek-V4-Flash-Vision-Exp,1048576,true,true,true,true,true,true,400,0,0,14
+B8,DeepSeek-V4-Flash-Vision-Exp,1048576,true,true,true,true,true,true,400,0,0,14
+CG,DeepSeek-V4-Flash-Vision-Exp,1048576,true,true,true,true,true,true,400,0,0,14
+CGR,DeepSeek-V4-Flash-Vision-Exp,1048576,true,true,true,true,true,true,400,0,0,14
