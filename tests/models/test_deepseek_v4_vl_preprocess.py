@@ -241,6 +241,45 @@ def test_processor_output():
     assert processor(images=[]) == {}
 
 
+def test_chw_width_1_3_4_normalization():
+    cases = ((3, 8, 1), (3, 8, 3), (3, 8, 4), (3, 8, 5))
+    for shape in cases:
+        image = np.zeros(shape, dtype=np.uint8)
+        image[1] = 22
+        converted = ours.normalize_image_to_pil(image)
+        assert converted.size == (shape[2], shape[1])
+        assert converted.getpixel((0, 0)) == (0, 22, 0)
+
+    hwc = np.zeros((8, 4, 3), dtype=np.uint8)
+    hwc[..., 0] = 11
+    converted = ours.normalize_image_to_pil(hwc)
+    assert converted.size == (4, 8)
+    assert converted.getpixel((0, 0)) == (11, 0, 0)
+
+
+def test_issue172_pad_free_cache_identity_is_position_invariant():
+    # The community issue used a 40x19 ViT grid. At the LLM side this is a
+    # 7x14 block: 122 position-independent tokens plus 0..3 compressor pads.
+    n_llm_h, n_llm_w, base_tokens = ours.grid_tokens(
+        19 * PATCH_SIZE,
+        40 * PATCH_SIZE,
+        PATCH_SIZE,
+        DOWNSAMPLE_RATIO,
+    )
+    assert (n_llm_h, n_llm_w, base_tokens) == (7, 14, 122)
+    cached_types, cached_perm = ours.build_image_block_pad_free(n_llm_h, n_llm_w)
+    assert len(cached_types) == base_tokens
+    assert (cached_types == IMAGE).sum() == n_llm_h * n_llm_w
+
+    expected_lengths = {0: 125, 1: 124, 2: 123, 3: 122}
+    for start_pos, expected_length in expected_lengths.items():
+        full_types, full_perm = ours.build_image_block(n_llm_h, n_llm_w, start_pos)
+        assert len(full_types) == expected_length
+        assert torch.equal(full_perm, cached_perm)
+        assert (full_types == IMAGE).sum() == n_llm_h * n_llm_w
+        assert torch.equal(full_types[-base_tokens:], cached_types)
+
+
 class _StubInfo:
     """Minimum ``ProcessingInfo`` surface for the placeholder-splicing test."""
 

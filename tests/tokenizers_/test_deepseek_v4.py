@@ -184,6 +184,82 @@ def test_deepseek_v4_renders_parsed_history_tool_arguments():
     assert 'parameter name="arguments"' not in prompt
 
 
+def test_deepseek_v4_allows_bare_image_tag_mentions():
+    prompt = _tokenizer().apply_chat_template(
+        [
+            {
+                "role": "system",
+                "content": "Markdown documentation may mention a bare <image> tag.",
+            },
+            {"role": "user", "content": "Continue"},
+        ],
+        tokenize=False,
+    )
+    assert "bare <image> tag" in prompt
+
+
+@pytest.mark.parametrize(
+    "message",
+    [
+        {"role": "system", "content": "load <image>/tmp/a.png</image>"},
+        {"role": "assistant", "content": "<｜deepseek_image｜>"},
+        {
+            "role": "assistant",
+            "content": [
+                {"type": "image_url", "image_url": {"url": "https://x/a.png"}}
+            ],
+        },
+    ],
+)
+def test_deepseek_v4_rejects_images_outside_user_roles(message):
+    with pytest.raises(ValueError, match="user messages only"):
+        _tokenizer().apply_chat_template(
+            [message, {"role": "user", "content": "Continue"}],
+            tokenize=False,
+        )
+
+
+def test_deepseek_v4_tool_text_may_quote_image_markers():
+    marker = "<｜deepseek_image｜>"
+    messages = [
+        {"role": "user", "content": "Inspect the log"},
+        {
+            "role": "assistant",
+            "tool_calls": [
+                {
+                    "id": "call_1",
+                    "type": "function",
+                    "function": {"name": "cat", "arguments": '{"path":"x"}'},
+                }
+            ],
+        },
+        {
+            "role": "tool",
+            "tool_call_id": "call_1",
+            "content": f"source mentions {marker} and <image>x</image>",
+        },
+    ]
+    prompt = _tokenizer().apply_chat_template(messages, tokenize=False)
+    assert "<image>x</image>" in prompt
+    assert marker not in prompt
+    assert "deepseek\u200b_image" in prompt
+
+
+def test_deepseek_v4_rejects_structured_image_in_tool_result():
+    messages = [
+        {"role": "user", "content": "Inspect"},
+        {
+            "role": "tool",
+            "tool_call_id": "call_1",
+            "content": [
+                {"type": "image_url", "image_url": {"url": "https://x/a.png"}}
+            ],
+        },
+    ]
+    with pytest.raises(ValueError, match="user messages only"):
+        _tokenizer().apply_chat_template(messages, tokenize=False)
+
+
 @pytest.mark.parametrize(
     ("reasoning_effort", "expected_prefix"),
     [

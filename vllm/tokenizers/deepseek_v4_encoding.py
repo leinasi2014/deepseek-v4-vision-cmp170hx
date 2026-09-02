@@ -31,6 +31,9 @@ LATEST_REMINDER_SP_TOKEN = "<｜latest_reminder｜>"
 # Placeholder text inlined at each image's position; the multimodal processor
 # later expands it into the sentinel token block.
 IMAGE_PLACEHOLDER = "<｜deepseek_image｜>"
+# Tool output is opaque data. Keep a quoted internal marker readable to the
+# model without letting the tokenizer turn it into a real image placeholder.
+TOOL_LITERAL_IMAGE_PLACEHOLDER = "<｜deepseek\u200b_image｜>"
 
 # Task special tokens for internal classification tasks
 DS_TASK_SP_TOKENS = {
@@ -225,6 +228,70 @@ def flatten_content_blocks(content: Any) -> Any:
                 f"Unsupported content block type: {block.get('type')!r}"
             )
     return "".join(parts)
+
+
+def _image_marker_in_text(text: str) -> bool:
+    if IMAGE_PLACEHOLDER in text:
+        return True
+    start_tag, end_tag = "<image>", "</image>"
+    offset = 0
+    while True:
+        start = text.find(start_tag, offset)
+        if start < 0:
+            return False
+        if text.find(end_tag, start + len(start_tag)) >= 0:
+            return True
+        offset = start + len(start_tag)
+
+
+def _message_value_has_image(value: Any, *, scan_text: bool) -> bool:
+    if isinstance(value, str):
+        return scan_text and _image_marker_in_text(value)
+    if not isinstance(value, list):
+        return False
+    for block in value:
+        if not isinstance(block, dict):
+            continue
+        if block.get("type") in ("image", "image_url"):
+            return True
+        if scan_text:
+            text = block.get("text") or ""
+            if isinstance(text, str) and _image_marker_in_text(text):
+                return True
+        nested = block.get("content")
+        if isinstance(nested, list) and _message_value_has_image(
+            nested, scan_text=scan_text
+        ):
+            return True
+    return False
+
+
+def _validate_image_message_role(message: Dict[str, Any]) -> None:
+    role = message.get("role")
+    if role in ("user", "developer"):
+        return
+    # Tool/function text may quote source or logs containing image markers.
+    # Structured image parts are still rejected for those roles.
+    scan_text = role not in ("tool", "function")
+    if _message_value_has_image(message.get("content"), scan_text=scan_text) or (
+        _message_value_has_image(
+            message.get("content_blocks"), scan_text=scan_text
+        )
+    ):
+        raise ValueError(
+            "Images are supported in user messages only: "
+            f"images in {role!r} messages are invalid."
+        )
+
+
+def _escape_tool_image_placeholders(value: Any) -> Any:
+    if isinstance(value, str):
+        return value.replace(IMAGE_PLACEHOLDER, TOOL_LITERAL_IMAGE_PLACEHOLDER)
+    if isinstance(value, list):
+        return [_escape_tool_image_placeholders(item) for item in value]
+    if isinstance(value, dict):
+        return {key: _escape_tool_image_placeholders(item) for key, item in value.items()}
+    return value
 
 
 def render_message(index: int, messages: List[Dict[str, Any]], thinking_mode: str, drop_thinking: bool = True, reasoning_effort: Optional[str] = None) -> str:
@@ -452,7 +519,7 @@ def merge_tool_messages(messages: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             tool_block = {
                 "type": "tool_result",
                 "tool_use_id": msg.get("tool_call_id", ""),
-                "content": msg.get("content", ""),
+                "content": _escape_tool_image_placeholders(msg.get("content", "")),
             }
             # Merge into previous message if it's already a user (merged tool)
             if merged and merged[-1].get("role") == "user" and "content_blocks" in merged[-1]:
@@ -561,6 +628,9 @@ def encode_messages(
         The encoded prompt string.
     """
     context = context if context else []
+
+    for message in [*context, *messages]:
+        _validate_image_message_role(message)
 
     # Preprocess: merge tool messages and sort tool results
     messages = merge_tool_messages(messages)

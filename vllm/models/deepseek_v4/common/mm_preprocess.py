@@ -151,6 +151,54 @@ def validate_image_sentinel_ids(tokenizer) -> None:
             )
 
 
+def looks_like_chw(shape: Sequence[int]) -> bool:
+    """Return whether a 3-D image array should be interpreted as C x H x W.
+
+    Widths 1, 3 and 4 are ambiguous because both the first and last axis can
+    look like a channel axis. vLLM supplies RGB CHW tensors, so prefer CHW
+    when the leading dimension is 3; keep gray/RGBA ambiguous arrays as HWC.
+    """
+    if len(shape) != 3:
+        return False
+    channels = (1, 3, 4)
+    c, width = int(shape[0]), int(shape[2])
+    if c not in channels:
+        return False
+    if width not in channels:
+        return True
+    return c == 3
+
+
+def normalize_image_to_pil(image: Any) -> Image.Image:
+    """Normalize PIL, NumPy and torch image inputs without CHW ambiguity."""
+    if isinstance(image, Image.Image):
+        return image
+    if isinstance(image, Mapping):
+        for key in ("image", "data", "pixel_values"):
+            if key in image:
+                image = image[key]
+                break
+    if isinstance(image, torch.Tensor):
+        image = image.detach().to(device="cpu", dtype=torch.float32).numpy()
+
+    array = np.asarray(image)
+    if array.ndim == 2:
+        array = np.stack([array, array, array], axis=-1)
+    elif looks_like_chw(array.shape):
+        array = np.transpose(array, (1, 2, 0))
+    if array.ndim != 3 or array.shape[-1] not in (1, 3, 4):
+        raise TypeError(f"Unsupported image array shape: {array.shape!r}")
+
+    if np.issubdtype(array.dtype, np.floating):
+        array = np.nan_to_num(array, nan=0.0, posinf=255.0, neginf=0.0)
+        if array.size and float(array.min()) >= 0.0 and float(array.max()) <= 1.0:
+            array = array * 255.0
+    array = np.clip(array, 0, 255).astype(np.uint8, copy=False)
+    if array.shape[-1] == 1:
+        array = np.repeat(array, 3, axis=-1)
+    return Image.fromarray(array).convert("RGB")
+
+
 def grid_tokens(best_height, best_width, patch_size, downsample_ratio):
     """Number of LLM tokens the aligner grid occupies (N-layout, including
     row/align padding)."""
@@ -312,8 +360,9 @@ class DeepseekV4VLImageProcessor:
         self.max_wh_ratio = config.vision_max_wh_ratio
 
     def __call__(self, image: Image.Image):
+        normalized = normalize_image_to_pil(image)
         return load_image(
-            image,
+            normalized,
             patch_size=self.patch_size,
             downsample_ratio=self.downsample_ratio,
             max_n_token=self.max_n_token,

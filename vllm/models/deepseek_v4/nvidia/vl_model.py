@@ -79,6 +79,35 @@ def _make_deepseek_v4_vl_weights_mapper(
     )
 
 
+def _multimodal_embedding_rows(embeddings: MultiModalEmbeddings) -> int:
+    """Count flattened multimodal rows for an explicit merge invariant."""
+    if isinstance(embeddings, torch.Tensor):
+        return int(embeddings.shape[0])
+    return sum(_multimodal_embedding_rows(item) for item in embeddings)
+
+
+def _validate_multimodal_embedding_rows(
+    is_multimodal: torch.Tensor,
+    embeddings: MultiModalEmbeddings,
+) -> None:
+    """Fail before merge when cached image rows do not match placeholders.
+
+    The current processor caches pad-free image rows, so compressor alignment
+    never changes this count. Avoid a host synchronization while CUDA graph
+    capture is active; the normal merge kernel remains the capture-time guard.
+    """
+    if is_multimodal.is_cuda and torch.cuda.is_current_stream_capturing():
+        return
+    placeholders = int(is_multimodal.sum().item())
+    embedding_rows = _multimodal_embedding_rows(embeddings)
+    if placeholders != embedding_rows:
+        raise ValueError(
+            "DeepSeek-V4 Vision placeholder/embedding mismatch: "
+            f"{placeholders} IMAGE placeholders vs {embedding_rows} embedding rows. "
+            "The pad-free encoder cache must be position invariant."
+        )
+
+
 @MULTIMODAL_REGISTRY.register_processor(
     DeepseekV4VLMultiModalProcessor,
     info=DeepseekV4VLProcessingInfo,
@@ -266,6 +295,7 @@ class DeepseekV4ForConditionalGeneration(
             return inputs_embeds
 
         assert is_multimodal is not None
+        _validate_multimodal_embedding_rows(is_multimodal, multimodal_embeddings)
         return _merge_multimodal_embeddings(
             inputs_embeds=inputs_embeds,
             multimodal_embeddings=multimodal_embeddings,
