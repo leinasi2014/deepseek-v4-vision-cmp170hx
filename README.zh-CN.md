@@ -21,8 +21,8 @@ MLA KV Cache 和 1M 上下文配置合并到同一源码树中。
 - 推荐：`VLLM_PREFILL_BLOCK_H=8`
 - Breakable CUDA Graph
 
-当前验证提交为
-`f09e0305445db93f628ce2ec71378a55370afa8e`。完整固定-token 测试方法与
+当前验证源码发布为提交
+`f00f0eecc41146f79f0545c15612962b66b693c5`。完整固定-token 测试方法与
 结果见 [VALIDATION.md](docs/cmp170hx/VALIDATION.md)。
 
 ## 主要改造

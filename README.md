@@ -23,8 +23,8 @@ or vLLM release.
 - Recommended SM80 prefill setting: `VLLM_PREFILL_BLOCK_H=8`
 - CUDA graph mode: breakable CUDA graph
 
-The latest validation used commit
-`f09e0305445db93f628ce2ec71378a55370afa8e`. The complete fixed-token test
+The latest validation source is published as commit
+`f00f0eecc41146f79f0545c15612962b66b693c5`. The complete fixed-token test
 method and results are documented in [VALIDATION.md](docs/cmp170hx/VALIDATION.md).
 
 ## What this fork adds

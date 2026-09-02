@@ -8,7 +8,10 @@ Hardware: four NVIDIA CMP 170HX GPUs (SM80), PP4 × TP1.
 
 Model: `DeepSeek-V4-Flash-Vision-Exp`.
 
-Source: `f09e0305445db93f628ce2ec71378a55370afa8e`.
+Published source: `f00f0eecc41146f79f0545c15612962b66b693c5`. This is tree-equivalent to
+the server-side shallow validation commit
+`f09e0305445db93f628ce2ec71378a55370afa8e`; commit IDs changed when the
+missing shallow parent boundary was converted into a publishable root history.
 
 Every arm used the same model, PP partition, DSpark configuration, FP8 KV
 cache, 1M service contract, prompts, and requested completion lengths.

@@ -32,10 +32,10 @@ reuses the existing processor's own conflict-resolution helpers.
 
 ## fix7 correctness hardening
 
-Commit `afbb1ccd1f9c5765d319430b7e9c2d70793681ed` adds image normalization,
+Commit `d584b9350d46a808c5883cb59e991561a8d18790` adds image normalization,
 pad-free cache regression tests, and multimodal embedding row checks.
 
-Commit `f09e0305445db93f628ce2ec71378a55370afa8e` rejects unsupported image
+Commit `f00f0eecc41146f79f0545c15612962b66b693c5` rejects unsupported image
 roles before multimodal tracking. This converts a reproducible EngineCore 500
 into an OpenAI-compatible client error.
 
