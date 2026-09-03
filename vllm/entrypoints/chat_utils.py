@@ -1683,6 +1683,64 @@ def _reject_deepseek_v4_image_outside_user_role(
         )
 
 
+def _relocate_deepseek_v4_images_outside_user_role(
+    messages: list[dict],
+    model_config: ModelConfig,
+) -> list[dict]:
+    """Solution-B shim: agent tool results sometimes carry screenshots inside
+    role 'tool' messages, which the DeepSeek-V4-Vision chat template cannot
+    place (images are user/developer-only). Instead of rejecting, relocate the
+    image parts into a synthetic user observation message placed right after
+    the originating message. The tool text stays in the tool message so
+    tool_call <-> tool_result pairing is preserved; the model sees the image
+    as the next user turn. The reject check above remains as a safety net for
+    any path that skips this relocation.
+    """
+    hf_config = model_config.hf_config
+    is_deepseek_v4_vision = (
+        getattr(hf_config, "model_type", None) == "deepseek_v4"
+        and getattr(hf_config, "vision_patch_size", None) is not None
+    )
+    if not is_deepseek_v4_vision:
+        return messages
+
+    out: list[dict] = []
+    for msg in messages:
+        role = msg.get("role")
+        content = msg.get("content")
+        if role in ("user", "developer") or not isinstance(content, list):
+            out.append(msg)
+            continue
+        image_parts = [
+            part
+            for part in content
+            if isinstance(part, dict)
+            and (
+                part.get("type") in _DEEPSEEK_V4_IMAGE_PART_TYPES
+                or any(field in part for field in _DEEPSEEK_V4_IMAGE_PART_FIELDS)
+            )
+        ]
+        if not image_parts:
+            out.append(msg)
+            continue
+
+        # Strip the relocated image parts from the original message.
+        kept = [part for part in content if id(part) not in {id(x) for x in image_parts}]
+        if kept:
+            msg["content"] = kept
+        else:
+            msg["content"] = [{"type": "text", "text": "[tool result]"}]
+        out.append(msg)
+        out.append(
+            {
+                "role": "user",
+                "content": image_parts
+                + [{"type": "text", "text": "[tool result image]"}],
+            }
+        )
+    return out
+
+
 PART_TYPES_TO_SKIP_NONE_CONTENT = (
     "text",
     "refusal",
@@ -2011,6 +2069,9 @@ def parse_chat_messages(
         media_io_kwargs=media_io_kwargs,
     )
 
+    messages = _relocate_deepseek_v4_images_outside_user_role(
+        messages, model_config
+    )
     for msg in messages:
         sub_messages = _parse_chat_message_content(
             msg,
@@ -2050,6 +2111,9 @@ async def parse_chat_messages_async(
         media_io_kwargs=media_io_kwargs,
     )
 
+    messages = _relocate_deepseek_v4_images_outside_user_role(
+        messages, model_config
+    )
     for msg in messages:
         sub_messages = _parse_chat_message_content(
             msg,
