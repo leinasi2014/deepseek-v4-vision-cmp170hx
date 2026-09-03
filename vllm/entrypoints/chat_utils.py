@@ -1724,13 +1724,12 @@ def _relocate_deepseek_v4_images_outside_user_role(
             out.append(msg)
             continue
 
-        # Strip the relocated image parts from the original message.
+        # Strip the relocated image parts; never mutate the caller's dict
+        # (reviewer note: original messages may be re-rendered by future paths).
         kept = [part for part in content if id(part) not in {id(x) for x in image_parts}]
-        if kept:
-            msg["content"] = kept
-        else:
-            msg["content"] = [{"type": "text", "text": "[tool result]"}]
-        out.append(msg)
+        relocated = dict(msg)
+        relocated["content"] = kept if kept else [{"type": "text", "text": "[tool result]"}]
+        out.append(relocated)
         out.append(
             {
                 "role": "user",
