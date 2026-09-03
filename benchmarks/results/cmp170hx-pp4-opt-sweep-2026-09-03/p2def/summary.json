@@ -1,0 +1,18 @@
+{
+  "prefill_10k_ttft_seconds": 3.740087,
+  "prefill_10k_tps": 2673.73,
+  "decode_10k_192_ttft_seconds": 1.955438,
+  "decode_10k_192_post_ttft_tps": 96.69,
+  "decode_10k_192_e2e_tps": 48.84,
+  "vision_smoke_seconds": 0.898,
+  "vision_smoke_output": "?",
+  "concurrency_16_total_tokens": 730,
+  "concurrency_16_aggregate_tps": 192.66,
+  "concurrency_16_elapsed": 3.79,
+  "decode_12x400_mean_post_ttft_tps": 64.63,
+  "decode_12x400_mean_e2e_tps": 61.69,
+  "all_exact_400": true,
+  "dspark_accepted_tokens": 3043,
+  "dspark_drafted_tokens": 8238,
+  "dspark_acceptance_rate": 0.3694
+}

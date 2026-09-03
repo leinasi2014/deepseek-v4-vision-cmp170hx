@@ -55,3 +55,13 @@ The driver/unlock procedure is intentionally outside this source repository.
 The vLLM process receives the API key as a command-line option, so users with
 permission to inspect the container may be able to read it. Keep Docker access
 restricted and use a trusted reverse proxy for public exposure.
+
+## 2026-09-03: defaults validated by a 14-arm sweep
+
+`serve-pp4.sh` defaults (`NCCL_P2P_LEVEL=SYS`, `--max-num-batched-tokens 2048`,
+`util 0.85`, partition `11,11,12,9`) are now measured optima on a second
+4-card CMP 170HX group: 96.7 tok/s decode / 147.2 tok/s after 10K / 4236 tok/s
+prefill / 329.9 tok/s at C16 (baseline 77.7/150.8/3525/330.8). Do not raise
+`--gpu-memory-utilization` to 0.93 or change the partition on top of SYS —
+both regress. See
+[docs/cmp170hx/OPTIMIZATION-2026-09-03.md](../docs/cmp170hx/OPTIMIZATION-2026-09-03.md).

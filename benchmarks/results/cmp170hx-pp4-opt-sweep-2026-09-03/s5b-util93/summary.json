@@ -1,0 +1,18 @@
+{
+  "prefill_10k_ttft_seconds": 2.835569,
+  "prefill_10k_tps": 3526.63,
+  "decode_10k_192_ttft_seconds": 2.121364,
+  "decode_10k_192_post_ttft_tps": 151.19,
+  "decode_10k_192_e2e_tps": 56.72,
+  "vision_smoke_seconds": 0.79,
+  "vision_smoke_output": "The user is asking for the color of the image.\nLooking at th",
+  "concurrency_16_total_tokens": 767,
+  "concurrency_16_aggregate_tps": 283.99,
+  "concurrency_16_elapsed": 2.7,
+  "decode_12x400_mean_post_ttft_tps": 93.25,
+  "decode_12x400_mean_e2e_tps": 90.4,
+  "all_exact_400": true,
+  "dspark_accepted_tokens": 3882,
+  "dspark_drafted_tokens": 9735,
+  "dspark_acceptance_rate": 0.3988
+}

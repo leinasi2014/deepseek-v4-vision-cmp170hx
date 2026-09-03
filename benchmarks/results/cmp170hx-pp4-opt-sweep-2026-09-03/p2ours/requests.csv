@@ -1,0 +1,13 @@
+arm,case,language,repetition,prompt_tokens,completion_tokens,ttft_seconds,decode_window_seconds,total_seconds,e2e_tps,post_ttft_tps,done_received
+p2ours,en-technical,en,1,134,400,0.28935,6.435557,6.725121,59.4785,61.9993,True
+p2ours,en-technical,en,2,134,400,0.281236,4.380878,4.662239,85.7957,91.0776,True
+p2ours,en-general,en,1,134,400,0.317541,5.92533,6.243141,64.0703,67.338,True
+p2ours,en-general,en,2,134,400,0.272903,6.059525,6.332665,63.1646,65.8467,True
+p2ours,en-qa,en,1,134,400,0.26957,11.483406,11.753089,34.0336,34.7458,True
+p2ours,en-qa,en,2,134,400,0.265909,6.608335,6.874467,58.1863,60.3783,True
+p2ours,zh-technical,zh,1,134,400,0.267963,6.765896,7.034,56.8667,58.9722,True
+p2ours,zh-technical,zh,2,134,400,0.318685,7.090786,7.409684,53.9834,56.2702,True
+p2ours,zh-general,zh,1,134,400,0.264024,6.690611,6.954868,57.5137,59.6358,True
+p2ours,zh-general,zh,2,134,400,0.316519,5.573122,5.889839,67.9136,71.5936,True
+p2ours,zh-qa,zh,1,134,400,0.301722,4.34438,4.646255,86.0908,91.8428,True
+p2ours,zh-qa,zh,2,134,400,0.318637,7.587566,7.90646,50.5915,52.586,True

@@ -1,0 +1,13 @@
+arm,case,language,repetition,prompt_tokens,completion_tokens,ttft_seconds,decode_window_seconds,total_seconds,e2e_tps,post_ttft_tps,done_received
+sFinal-nolock,en-technical,en,1,134,400,0.130282,7.777464,7.907974,50.5819,51.3021,True
+sFinal-nolock,en-technical,en,2,134,400,0.129075,5.314786,5.444018,73.4751,75.0736,True
+sFinal-nolock,en-general,en,1,134,400,0.131716,4.764632,4.896497,81.6911,83.742,True
+sFinal-nolock,en-general,en,2,134,400,0.138647,5.172852,5.311685,75.3057,77.1335,True
+sFinal-nolock,en-qa,en,1,134,400,0.14081,5.166406,5.30737,75.3669,77.2297,True
+sFinal-nolock,en-qa,en,2,134,400,0.147543,5.061052,5.208789,76.7933,78.8374,True
+sFinal-nolock,zh-technical,zh,1,134,400,0.130321,5.148572,5.279053,75.7712,77.4972,True
+sFinal-nolock,zh-technical,zh,2,134,400,0.133007,4.437525,4.570664,87.5146,89.915,True
+sFinal-nolock,zh-general,zh,1,134,400,0.130845,5.546747,5.677785,70.45,71.9341,True
+sFinal-nolock,zh-general,zh,2,134,400,0.131968,4.428518,4.560632,87.7071,90.0979,True
+sFinal-nolock,zh-qa,zh,1,134,400,0.132369,2.824153,2.956728,135.2847,141.2813,True
+sFinal-nolock,zh-qa,zh,2,134,400,0.134329,6.473327,6.607864,60.5339,61.6375,True

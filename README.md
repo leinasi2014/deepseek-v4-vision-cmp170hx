@@ -30,6 +30,18 @@ method and results are documented in [VALIDATION.md](docs/cmp170hx/VALIDATION.md
 The sanitized per-request and per-GPU measurements are available in the
 [machine-readable test dataset](benchmarks/results/cmp170hx-pp4-fix7-2026-09-02/README.md).
 
+## 2026-09-03 optimization update
+
+A factor sweep on a second 4-card group re-validated the recommended serving
+profile as `NCCL_P2P_LEVEL=SYS` + `--max-num-batched-tokens 2048` (everything
+else unchanged): **96.7 tok/s decode, 147.2 tok/s after a 10K prompt, 4236 tok/s
+prefill, 329.9 tok/s at 16-way concurrency** vs 77.7/150.8/3525/330.8 baseline
+(+24% single-stream). `NCCL_P2P_LEVEL=SYS` is the permissive P2P distance
+ceiling per official NCCL semantics and engages P2P on NODE-level pairs the
+default PIX threshold skips. Full method, 14-arm matrix, plan-2 engine
+comparison, and the Xid/memory/power safety ledger:
+[OPTIMIZATION-2026-09-03.md](docs/cmp170hx/OPTIMIZATION-2026-09-03.md).
+
 ## Latest Fix7 benchmark
 
 Measured on 2026-09-02 with the validated PP4 profile above. Every arm used

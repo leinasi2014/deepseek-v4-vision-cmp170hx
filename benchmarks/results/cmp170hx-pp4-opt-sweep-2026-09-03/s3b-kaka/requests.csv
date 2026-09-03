@@ -1,0 +1,13 @@
+arm,case,language,repetition,prompt_tokens,completion_tokens,ttft_seconds,decode_window_seconds,total_seconds,e2e_tps,post_ttft_tps,done_received
+s3b-kaka,en-technical,en,1,134,400,0.231227,5.058148,5.289559,75.6207,78.8826,True
+s3b-kaka,en-technical,en,2,134,400,0.252375,5.237551,5.490145,72.8578,76.1806,True
+s3b-kaka,en-general,en,1,134,400,0.257991,4.458748,4.716951,84.8005,89.487,True
+s3b-kaka,en-general,en,2,134,400,0.214779,5.75487,5.969831,67.0036,69.3326,True
+s3b-kaka,en-qa,en,1,134,400,0.254822,7.425846,7.680784,52.078,53.7313,True
+s3b-kaka,en-qa,en,2,134,400,0.228587,5.730397,5.959182,67.1233,69.6287,True
+s3b-kaka,zh-technical,zh,1,134,400,0.186668,3.057688,3.244448,123.2875,130.4908,True
+s3b-kaka,zh-technical,zh,2,134,400,0.250727,4.997756,5.248606,76.2107,79.8358,True
+s3b-kaka,zh-general,zh,1,134,400,0.246539,5.512329,5.759038,69.4561,72.3832,True
+s3b-kaka,zh-general,zh,2,134,400,0.239155,5.690787,5.930014,67.4535,70.1133,True
+s3b-kaka,zh-qa,zh,1,134,400,0.231728,3.699577,3.931464,101.7433,107.8502,True
+s3b-kaka,zh-qa,zh,2,134,400,0.251571,4.256677,4.508438,88.7225,93.7351,True

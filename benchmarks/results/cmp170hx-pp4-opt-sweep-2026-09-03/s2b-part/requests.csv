@@ -1,0 +1,13 @@
+arm,case,language,repetition,prompt_tokens,completion_tokens,ttft_seconds,decode_window_seconds,total_seconds,e2e_tps,post_ttft_tps,done_received
+s2b-part,en-technical,en,1,134,400,0.131151,6.499627,6.631024,60.3225,61.3881,True
+s2b-part,en-technical,en,2,134,400,0.1299,5.838271,5.968301,67.0208,68.3422,True
+s2b-part,en-general,en,1,134,400,0.131309,3.77064,3.902132,102.5081,105.8176,True
+s2b-part,en-general,en,2,134,400,0.136159,3.19166,3.327984,120.1929,125.0133,True
+s2b-part,en-qa,en,1,134,400,0.129387,5.255615,5.385161,74.2782,75.9188,True
+s2b-part,en-qa,en,2,134,400,0.138036,6.905749,7.044017,56.7858,57.778,True
+s2b-part,zh-technical,zh,1,134,400,0.1308,4.095943,4.226878,94.6325,97.4135,True
+s2b-part,zh-technical,zh,2,134,400,0.130118,4.771457,4.901747,81.6036,83.6223,True
+s2b-part,zh-general,zh,1,134,400,0.129541,5.015145,5.144847,77.7477,79.559,True
+s2b-part,zh-general,zh,2,134,400,0.130931,4.985955,5.117123,78.1689,80.0248,True
+s2b-part,zh-qa,zh,1,134,400,0.129925,3.141685,3.271818,122.2562,127.0019,True
+s2b-part,zh-qa,zh,2,134,400,0.131777,5.381111,5.51309,72.5546,74.1483,True

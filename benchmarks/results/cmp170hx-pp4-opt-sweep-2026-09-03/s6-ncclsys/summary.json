@@ -1,0 +1,18 @@
+{
+  "prefill_10k_ttft_seconds": 2.817384,
+  "prefill_10k_tps": 3549.39,
+  "decode_10k_192_ttft_seconds": 2.088954,
+  "decode_10k_192_post_ttft_tps": 140.26,
+  "decode_10k_192_e2e_tps": 55.64,
+  "vision_smoke_seconds": 0.779,
+  "vision_smoke_output": "The user wants to know the color of the provided image. I wi",
+  "concurrency_16_total_tokens": 813,
+  "concurrency_16_aggregate_tps": 319.07,
+  "concurrency_16_elapsed": 2.55,
+  "decode_12x400_mean_post_ttft_tps": 89.18,
+  "decode_12x400_mean_e2e_tps": 86.7,
+  "all_exact_400": true,
+  "dspark_accepted_tokens": 3891,
+  "dspark_drafted_tokens": 9960,
+  "dspark_acceptance_rate": 0.3907
+}

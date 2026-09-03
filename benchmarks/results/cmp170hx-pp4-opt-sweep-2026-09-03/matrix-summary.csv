@@ -1,0 +1,15 @@
+arm,config,decode_12x400_tps,decode_10k_192_tps,prefill_10k_tps,concurrency_16_tps,dspark_acceptance,all_exact_400
+s0b,"baseline: part 11,11,12,9 bat4096 util0.85 nccl-default",77.72,150.83,3525.24,330.83,0.3288,True
+s2b-part,"+part 12,11,11,9",86.34,149.96,3984.13,289.0,0.3782,True
+s4b-bat2048,+bat2048,87.19,146.99,3678.5,331.63,0.3823,True
+s5b-util93,+util0.93,93.25,151.19,3526.63,283.99,0.3988,True
+s6b-ncclsys,+NCCL_P2P_LEVEL=SYS,99.07,109.39,3930.44,284.63,0.4589,True
+s6bU93,SYS+util0.93,83.52,111.62,3636.46,297.97,0.3746,True
+s6bP12,SYS+part12,80.27,151.14,3707.22,289.3,0.3529,True
+s6bB20,SYS+bat2048 (recommended),96.7,147.18,4236.02,329.86,0.4293,True
+s6bP12U93,SYS+part12+util0.93,92.69,149.83,3611.01,297.78,0.3772,True
+s3b-kaka,kaka86mm profile: part12+bat2048+util0.93+Ring+piecewise,82.64,139.35,3355.12,283.67,0.3884,True
+sFinal,SYS+part12+bat2048+util0.93 (clock locked 1350),85.67,71.06,4226.12,293.16,0.3848,True
+sFinal-nolock,SYS+part12+bat2048+util0.93,81.31,116.94,3595.19,306.63,0.3463,True
+p2def,"plan2 engine (wtdcode+PR54566+sm80), kaka profile, n=3",64.63,96.69,2673.73,192.66,0.3694,True
+p2ours,"plan2 engine, s6b-mapped, n=3",64.36,96.6,2627.23,185.78,0.3659,True
