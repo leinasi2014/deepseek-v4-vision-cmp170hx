@@ -12,6 +12,12 @@ GPU_DEVICES=${GPU_DEVICES:-0,1,2,3}
 HOST_PORT=${HOST_PORT:-9016}
 MAX_MODEL_LEN=${MAX_MODEL_LEN:-1048576}
 PP_PARTITION=${PP_PARTITION:-11,11,12,9}
+# 2026-09-03: 2048 is the validated optimum (+12% vs 4096). The Xid-31 incident
+# was NOT caused by 2048 -- it was caused by a hand-written relaunch script that
+# dropped DSV4_LOGITS_ROW_CHUNK=64, silently switching the engine to the
+# unchunked indexer-logits path that faults at ~174k context. NEVER remove
+# that env; see docs/cmp170hx/XID31-ROOT-CAUSE-2026-09-03.md.
+MAX_BATCHED_TOKENS=${MAX_BATCHED_TOKENS:-2048}
 
 test -d "$MODEL_PATH"
 test -r "$API_KEY_FILE"
@@ -62,7 +68,7 @@ container_id=$(docker run -d \
     --kv-cache-dtype fp8 \
     --block-size 256 \
     --max-model-len "$MAX_MODEL_LEN" \
-    --max-num-batched-tokens 4096 \
+    --max-num-batched-tokens "$MAX_BATCHED_TOKENS" \
     --max-num-seqs 16 \
     --gpu-memory-utilization 0.85 \
     --enable-prefix-caching \
