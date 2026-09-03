@@ -56,12 +56,13 @@ The vLLM process receives the API key as a command-line option, so users with
 permission to inspect the container may be able to read it. Keep Docker access
 restricted and use a trusted reverse proxy for public exposure.
 
-## 2026-09-03: defaults validated by a 14-arm sweep
+## 2026-09-03: sweep results and the bat2048 incident
 
-`serve-pp4.sh` defaults (`NCCL_P2P_LEVEL=SYS`, `--max-num-batched-tokens 2048`,
-`util 0.85`, partition `11,11,12,9`) are now measured optima on a second
-4-card CMP 170HX group: 96.7 tok/s decode / 147.2 tok/s after 10K / 4236 tok/s
-prefill / 329.9 tok/s at C16 (baseline 77.7/150.8/3525/330.8). Do not raise
-`--gpu-memory-utilization` to 0.93 or change the partition on top of SYS —
-both regress. See
+`NCCL_P2P_LEVEL=SYS` is the validated headline win (+27% single-stream).
+**`serve-pp4.sh` keeps `--max-num-batched-tokens 4096`**: `SYS + bat2048`
+measured faster prefill/C16 on the test group (4236 prefill / 329.9 C16 vs
+3525 / 330.8 baseline) but **crashed production with Xid 31 on the drafter
+rank after 67 minutes of live traffic**; 4096 has 13h+ zero-Xid production
+uptime. Do not raise `--gpu-memory-utilization` to 0.93 or change the
+partition on top of SYS — both regress. Full incident and data:
 [docs/cmp170hx/OPTIMIZATION-2026-09-03.md](../docs/cmp170hx/OPTIMIZATION-2026-09-03.md).

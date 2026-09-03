@@ -54,10 +54,29 @@ Additional observations:
 
 ## Recommended profile (= deploy/serve-pp4.sh defaults)
 
-`NCCL_P2P_LEVEL=SYS` + `--max-num-batched-tokens 2048`, everything else as the
+`NCCL_P2P_LEVEL=SYS` + `--max-num-batched-tokens 4096`, everything else as the
 published Fix7 profile. Measured: 96.7 tok/s decode, 147.2 tok/s after 10K,
 4236 tok/s prefill, 329.9 tok/s at C16, 42.9% DSpark acceptance
 (baseline: 77.7 / 150.8 / 3525 / 330.8 / 32.9%).
+
+## Incident note (2026-09-03 04:33 UTC+8): bat2048 Xid-31 in production
+
+The sweep's best all-rounder (`SYS + bat2048`, arm `s6bB20`) was deployed to
+the production 4-card group and measured 83.4 tok/s decode / 5249 tok/s
+prefill / 350 tok/s C16 against live service. **67 minutes later the service
+crashed with Xid 31 (MMU fault, GRAPHICS GPC + CE2) on the last PP rank
+(GPU3, the DSpark drafter rank).** The auto-restart's first attempt also
+failed (card still wedged); the second attempt recovered. Prior production
+uptime with bat4096 exceeded 13 hours with zero Xid, and no Xid occurred
+during the entire GPU4-7 sweep campaign (including multiple bat2048 arms) —
+so the trigger is input/scheduler-shape dependent (`max_num_scheduled_tokens`
+drops to 1984 under bat2048 + DSpark n=5 + 16 seqs).
+
+**Decision: production stays on bat4096** (also the 99.07 tok/s single-stream
+optimum). bat2048 remains a measured-fast-but-unproven profile: +6% C16,
++24% prefill, but needs a long soak (24h+) before it can be trusted for
+unattended serving. Rollback artifact: `prod-container-backup-*.json` on the
+host; relaunch script pins `CUDA_VISIBLE_DEVICES=0,1,2,3`.
 
 ## Safety ledger
 

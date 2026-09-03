@@ -62,7 +62,7 @@ container_id=$(docker run -d \
     --kv-cache-dtype fp8 \
     --block-size 256 \
     --max-model-len "$MAX_MODEL_LEN" \
-    --max-num-batched-tokens 2048 \
+    --max-num-batched-tokens 4096 \
     --max-num-seqs 16 \
     --gpu-memory-utilization 0.85 \
     --enable-prefix-caching \

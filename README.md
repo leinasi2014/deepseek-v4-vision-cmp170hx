@@ -32,15 +32,17 @@ The sanitized per-request and per-GPU measurements are available in the
 
 ## 2026-09-03 optimization update
 
-A factor sweep on a second 4-card group re-validated the recommended serving
-profile as `NCCL_P2P_LEVEL=SYS` + `--max-num-batched-tokens 2048` (everything
-else unchanged): **96.7 tok/s decode, 147.2 tok/s after a 10K prompt, 4236 tok/s
-prefill, 329.9 tok/s at 16-way concurrency** vs 77.7/150.8/3525/330.8 baseline
-(+24% single-stream). `NCCL_P2P_LEVEL=SYS` is the permissive P2P distance
+A factor sweep on a second 4-card group validated `NCCL_P2P_LEVEL=SYS` as the
+headline win (+27% single-stream decode; SYS is the permissive P2P distance
 ceiling per official NCCL semantics and engages P2P on NODE-level pairs the
-default PIX threshold skips. Full method, 14-arm matrix, plan-2 engine
-comparison, and the Xid/memory/power safety ledger:
-[OPTIMIZATION-2026-09-03.md](docs/cmp170hx/OPTIMIZATION-2026-09-03.md).
+default PIX threshold skips). **Production recommendation: `SYS` +
+`--max-num-batched-tokens 4096`** (99.1 tok/s single-stream on the test group).
+`SYS + bat2048` measured even better prefill/C16 but **triggered an Xid-31
+crash on the drafter rank after 67 minutes of live traffic** — see the incident
+note in
+[OPTIMIZATION-2026-09-03.md](docs/cmp170hx/OPTIMIZATION-2026-09-03.md) before
+considering it; it requires a long soak. Full method, 14-arm matrix, plan-2
+engine comparison, and the Xid/memory/power safety ledger are in the same doc.
 
 ## Latest Fix7 benchmark
 
