@@ -1,9 +1,9 @@
 #!/bin/bash
-# DSV4-Vision PP8 test: 8-card pipeline parallel, faithful env set (nothing
-# dropped -- that omission was the Xid31 root cause), overlay7 image
-# (2 hardening patches + solution-B), bat2048, port 9016.
+# DSV4-Vision PP8 PRODUCTION launch (2026-09-04 tested-best config):
+#   bat8192 + seqs128 + util0.85 + graph768, faithful env, DSpark n5.
+#   Keep DSV4_LOGITS_ROW_CHUNK=64 (mandatory, see XID31-ROOT-CAUSE doc).
 set -e
-NAME=dsv4-vision-pp8-test
+NAME=deepseek-v4-vision-cmp170hx-pp8
 IMG=dsv4-a100:oldfast-vision-fix7-chatimg-overlay7
 
 docker rm -f "$NAME" 2>/dev/null || true
